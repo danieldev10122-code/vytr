@@ -9,6 +9,7 @@ struct MealDetailView: View {
     let meal: Meal
 
     @State private var showDeleteConfirm = false
+    @State private var showEditor = false
 
     var body: some View {
         NavigationStack {
@@ -29,10 +30,17 @@ struct MealDetailView: View {
             .navigationTitle(meal.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Edit") { showEditor = true }
+                        .foregroundStyle(Theme.Palette.textSecondary)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .foregroundStyle(Theme.Palette.accent)
                 }
+            }
+            .sheet(isPresented: $showEditor) {
+                AddMealView(existing: meal)
             }
             .confirmationDialog(
                 "Delete this meal?",

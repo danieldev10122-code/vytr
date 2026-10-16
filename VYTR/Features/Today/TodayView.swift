@@ -85,7 +85,7 @@ struct TodayView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showAddMeal) {
-                AddMealView()
+                AddMealView(existing: nil)
             }
             .sheet(item: $selectedMeal) { meal in
                 MealDetailView(meal: meal)

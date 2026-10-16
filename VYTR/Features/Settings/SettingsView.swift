@@ -17,6 +17,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.l) {
                         remindersLink
+                        goalsLink
                         keyCard
                         if hasKey { diagnosticCard }
                         privacyCard
@@ -108,34 +109,55 @@ struct SettingsView: View {
         .vytrCard()
     }
 
+    private var goalsLink: some View {
+        NavigationLink {
+            GoalsView()
+        } label: {
+            navRow(
+                icon: "target",
+                title: "Daily targets",
+                subtitle: "Calories and macros you are aiming for"
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func navRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: Theme.Spacing.m) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .light))
+                .foregroundStyle(Theme.Palette.accent)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(Theme.Palette.accent.opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.vytrBody.weight(.medium))
+                    .foregroundStyle(Theme.Palette.textPrimary)
+                Text(subtitle)
+                    .font(.vytrCaption)
+                    .foregroundStyle(Theme.Palette.textTertiary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.Palette.textTertiary)
+        }
+        .vytrCard()
+    }
+
     private var remindersLink: some View {
         NavigationLink {
             RemindersView()
         } label: {
-            HStack(spacing: Theme.Spacing.m) {
-                Image(systemName: "bell")
-                    .font(.system(size: 17, weight: .light))
-                    .foregroundStyle(Theme.Palette.accent)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Theme.Palette.accent.opacity(0.12)))
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Reminders")
-                        .font(.vytrBody.weight(.medium))
-                        .foregroundStyle(Theme.Palette.textPrimary)
-                    Text("Times and days you choose, scheduled on this device")
-                        .font(.vytrCaption)
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.Palette.textTertiary)
-            }
-            .vytrCard()
+            navRow(
+                icon: "bell",
+                title: "Reminders",
+                subtitle: "Times and days you choose, scheduled on this device"
+            )
         }
         .buttonStyle(.plain)
     }

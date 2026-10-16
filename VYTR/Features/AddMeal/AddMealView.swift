@@ -6,6 +6,9 @@ struct AddMealView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
+    /// nil logs a new meal, otherwise this one is edited in place.
+    let existing: Meal?
+
     @State private var name = ""
     @State private var caloriesLow = ""
     @State private var caloriesHigh = ""
@@ -42,7 +45,7 @@ struct AddMealView: View {
                 form
                 if isAnalyzing { analyzingOverlay }
             }
-            .navigationTitle("Log a meal")
+            .navigationTitle(existing == nil ? "Log a meal" : "Edit meal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -72,6 +75,7 @@ struct AddMealView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .onAppear(perform: load)
             .onChange(of: imageData) { _, _ in
                 // A new photo invalidates an estimate made from the old one.
                 analysis = nil
@@ -243,9 +247,39 @@ struct AddMealView: View {
         }
     }
 
+    private func load() {
+        guard let existing, name.isEmpty, caloriesLow.isEmpty else { return }
+        name = existing.name
+        caloriesLow = "\(existing.caloriesMin)"
+        caloriesHigh = existing.isEstimate ? "\(existing.caloriesMax)" : ""
+        protein = existing.proteinGrams.map { "\(Int($0.rounded()))" } ?? ""
+        carbs = existing.carbsGrams.map { "\(Int($0.rounded()))" } ?? ""
+        fat = existing.fatGrams.map { "\(Int($0.rounded()))" } ?? ""
+        eatenAt = existing.eatenAt
+        imageData = existing.photo
+    }
+
     private func save() {
         guard let low = lowValue else { return }
         let high = Int(caloriesHigh) ?? low
+
+        if let existing {
+            existing.name = trimmedName
+            existing.eatenAt = eatenAt
+            existing.caloriesMin = min(low, high)
+            existing.caloriesMax = max(low, high)
+            existing.proteinGrams = Double(protein)
+            existing.carbsGrams = Double(carbs)
+            existing.fatGrams = Double(fat)
+            existing.photo = imageData
+            // Re-analysing an existing meal makes it an estimate again;
+            // editing it by hand leaves its origin as it was.
+            if analysis != nil { existing.sourceRaw = MealSource.photoEstimate.rawValue }
+            try? context.save()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            dismiss()
+            return
+        }
 
         let meal = Meal(
             name: trimmedName,

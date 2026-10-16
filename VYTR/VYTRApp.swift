@@ -6,7 +6,7 @@ struct VYTRApp: App {
     /// All data stays on the device. No account, no sync, no server.
     private let container: ModelContainer = {
         do {
-            return try ModelContainer(for: Meal.self, Workout.self)
+            return try ModelContainer(for: Meal.self, Workout.self, Reminder.self)
         } catch {
             fatalError("Could not create the local data store: \(error)")
         }

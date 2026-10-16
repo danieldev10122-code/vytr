@@ -16,6 +16,7 @@ struct SettingsView: View {
 
                 ScrollView {
                     VStack(spacing: Theme.Spacing.l) {
+                        remindersLink
                         keyCard
                         if hasKey { diagnosticCard }
                         privacyCard
@@ -104,6 +105,38 @@ struct SettingsView: View {
             }
         }
         .vytrCard()
+    }
+
+    private var remindersLink: some View {
+        NavigationLink {
+            RemindersView()
+        } label: {
+            HStack(spacing: Theme.Spacing.m) {
+                Image(systemName: "bell")
+                    .font(.system(size: 17, weight: .light))
+                    .foregroundStyle(Theme.Palette.accent)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Theme.Palette.accent.opacity(0.12)))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Reminders")
+                        .font(.vytrBody.weight(.medium))
+                        .foregroundStyle(Theme.Palette.textPrimary)
+                    Text("Times and days you choose, scheduled on this device")
+                        .font(.vytrCaption)
+                        .foregroundStyle(Theme.Palette.textTertiary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .vytrCard()
+        }
+        .buttonStyle(.plain)
     }
 
     /// Sends a few deliberately tiny requests so a failure can be read as

@@ -1,51 +1,84 @@
 import SwiftUI
 
-/// The single "what is next" card: the upcoming workout, or an invitation
-/// to plan one when the schedule is empty.
+/// What is coming next: the upcoming workout, the next reminder, or an
+/// honest note that nothing is scheduled.
 struct NextUpCard: View {
     let workout: Workout?
+    let reminder: Reminder?
+    let reminderDate: Date?
+
+    private var hasAnything: Bool {
+        workout != nil || reminder != nil
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             SectionLabel(text: "Next up")
 
             if let workout {
-                HStack(spacing: Theme.Spacing.m) {
-                    Image(systemName: "dumbbell")
-                        .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(Theme.Palette.accent)
-                        .frame(width: 34, height: 34)
-                        .background(
-                            Circle().fill(Theme.Palette.accent.opacity(0.12))
-                        )
+                entry(
+                    icon: "dumbbell",
+                    accented: true,
+                    title: workout.name,
+                    detail: workout.scheduledAt.formatted(.relative(presentation: .named))
+                )
+            }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(workout.name)
-                            .font(.vytrBody.weight(.medium))
-                            .foregroundStyle(Theme.Palette.textPrimary)
-                        Text(workout.scheduledAt.formatted(.relative(presentation: .named)))
-                            .font(.vytrCaption)
-                            .foregroundStyle(Theme.Palette.textSecondary)
-                    }
-
-                    Spacer(minLength: 0)
+            if let reminder {
+                if workout != nil {
+                    Divider().overlay(Theme.Palette.separator)
                 }
-            } else {
-                HStack(spacing: Theme.Spacing.m) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(Theme.Palette.surfaceRaised))
+                entry(
+                    icon: "bell",
+                    accented: true,
+                    title: reminder.title,
+                    detail: detailText(for: reminderDate, fallback: reminder.timeText)
+                )
+            }
 
-                    Text("Nothing scheduled")
-                        .font(.vytrBody)
-                        .foregroundStyle(Theme.Palette.textSecondary)
-
-                    Spacer(minLength: 0)
-                }
+            if !hasAnything {
+                entry(
+                    icon: "calendar",
+                    accented: false,
+                    title: "Nothing scheduled",
+                    detail: nil
+                )
             }
         }
         .vytrCard()
+    }
+
+    private func detailText(for date: Date?, fallback: String) -> String {
+        guard let date else { return fallback }
+        let relative = date.formatted(.relative(presentation: .named))
+        return "\(fallback) - \(relative)"
+    }
+
+    private func entry(icon: String, accented: Bool, title: String, detail: String?) -> some View {
+        HStack(spacing: Theme.Spacing.m) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .light))
+                .foregroundStyle(accented ? Theme.Palette.accent : Theme.Palette.textTertiary)
+                .frame(width: 34, height: 34)
+                .background(
+                    Circle().fill(
+                        accented ? Theme.Palette.accent.opacity(0.12) : Theme.Palette.surfaceRaised
+                    )
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.vytrBody.weight(accented ? .medium : .regular))
+                    .foregroundStyle(accented ? Theme.Palette.textPrimary : Theme.Palette.textSecondary)
+                    .lineLimit(2)
+                if let detail {
+                    Text(detail)
+                        .font(.vytrCaption)
+                        .foregroundStyle(Theme.Palette.textSecondary)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
     }
 }

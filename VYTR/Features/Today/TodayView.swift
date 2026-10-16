@@ -10,6 +10,8 @@ struct TodayView: View {
     @Query(sort: \Workout.scheduledAt, order: .forward)
     private var allWorkouts: [Workout]
 
+    @Query private var allReminders: [Reminder]
+
     @AppStorage(DailyGoals.caloriesKey) private var calorieGoal = DailyGoals.defaultCalories
     @AppStorage(DailyGoals.proteinKey)  private var proteinGoal = DailyGoals.defaultProtein
     @AppStorage(DailyGoals.carbsKey)    private var carbsGoal   = DailyGoals.defaultCarbs
@@ -25,6 +27,16 @@ struct TodayView: View {
 
     private var nextWorkout: Workout? {
         allWorkouts.first { !$0.isCompleted && $0.scheduledAt >= .now }
+    }
+
+    /// The reminder that fires soonest, so Today answers "what is next"
+    /// without opening another screen.
+    private var nextReminder: (reminder: Reminder, date: Date)? {
+        allReminders
+            .compactMap { reminder in
+                reminder.nextOccurrence().map { (reminder: reminder, date: $0) }
+            }
+            .min { $0.date < $1.date }
     }
 
     private var consumed: Int {
@@ -57,7 +69,11 @@ struct TodayView: View {
 
                         logMealButton
                         macros
-                        NextUpCard(workout: nextWorkout)
+                        NextUpCard(
+                            workout: nextWorkout,
+                            reminder: nextReminder?.reminder,
+                            reminderDate: nextReminder?.date
+                        )
                         meals
                     }
                     .padding(.horizontal, Theme.Spacing.m)

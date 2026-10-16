@@ -61,6 +61,19 @@ jobs:
             find build -name "*.app" -maxdepth 6 || true
             exit 1
           fi
+          # An asset catalog that fails to assign its icon only warns, so
+          # the build stays green and ships without one. Check the result
+          # rather than the exit code.
+          if [ ! -f "$APP/Assets.car" ]; then
+            echo "::error::Assets.car is missing - the app icon did not compile into the bundle"
+            ls -la "$APP"
+            exit 1
+          fi
+          if ! /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "$APP/Info.plist" >/dev/null 2>&1; then
+            echo "::error::Info.plist has no CFBundleIcons - iOS would show a blank icon"
+            exit 1
+          fi
+
           mkdir -p Payload
           cp -R "$APP" Payload/
           zip -0 -y -qr VYTR.ipa Payload

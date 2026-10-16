@@ -20,12 +20,8 @@ struct RootView: View {
             )
             .tabItem { Label("Training", systemImage: "dumbbell") }
 
-            PlaceholderView(
-                title: "More",
-                systemImage: "slider.horizontal.3",
-                message: "Reminders, daily targets and app settings."
-            )
-            .tabItem { Label("More", systemImage: "slider.horizontal.3") }
+            SettingsView()
+                .tabItem { Label("More", systemImage: "slider.horizontal.3") }
         }
         .tint(Theme.Palette.accent)
     }

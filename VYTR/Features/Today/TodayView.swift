@@ -18,6 +18,7 @@ struct TodayView: View {
     @AppStorage(DailyGoals.fatKey)      private var fatGoal     = DailyGoals.defaultFat
 
     @State private var showAddMeal = false
+    @State private var selectedMeal: Meal?
 
     // Filtering in memory rather than in a predicate keeps the date logic
     // readable, and a personal day holds a handful of meals.
@@ -86,6 +87,9 @@ struct TodayView: View {
             .sheet(isPresented: $showAddMeal) {
                 AddMealView()
             }
+            .sheet(item: $selectedMeal) { meal in
+                MealDetailView(meal: meal)
+            }
         }
     }
 
@@ -146,8 +150,13 @@ struct TodayView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(todaysMeals) { meal in
-                        MealRow(meal: meal)
-                            .contextMenu {
+                        Button {
+                            selectedMeal = meal
+                        } label: {
+                            MealRow(meal: meal)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
                                 Button(role: .destructive) {
                                     delete(meal)
                                 } label: {

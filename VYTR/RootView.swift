@@ -6,12 +6,8 @@ struct RootView: View {
             TodayView()
                 .tabItem { Label("Today", systemImage: "circle.dashed") }
 
-            PlaceholderView(
-                title: "Journal",
-                systemImage: "square.grid.2x2",
-                message: "Your meal history will live here, searchable by name and date."
-            )
-            .tabItem { Label("Journal", systemImage: "square.grid.2x2") }
+            JournalView()
+                .tabItem { Label("Journal", systemImage: "square.grid.2x2") }
 
             PlaceholderView(
                 title: "Training",

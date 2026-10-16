@@ -43,30 +43,51 @@ struct VytrButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Theme.Spacing.s) {
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(foreground)
-                } else if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.vytrHeadline)
-                }
-
-                Text(isLoading ? "Working" : title)
-                    .font(.vytrHeadline)
-            }
-            .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(Capsule().fill(background))
-            .contentShape(Capsule())
+            VytrButtonLabel(
+                title: isLoading ? "Working" : title,
+                systemImage: systemImage,
+                isLoading: isLoading,
+                foreground: foreground,
+                background: background
+            )
         }
         .buttonStyle(PressableButtonStyle())
         .disabled(isLoading || !isEnabled)
         .animation(Theme.Motion.gentle, value: isLoading)
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// The capsule itself, separated out so a control that cannot be a
+/// Button - a ShareLink, which insists on providing its own - still
+/// looks like every other action in the app rather than a near miss.
+struct VytrButtonLabel: View {
+    let title: String
+    var systemImage: String?
+    var isLoading: Bool = false
+    var foreground: Color = Theme.Palette.background
+    var background: Color = Theme.Palette.accent
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(foreground)
+            } else if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.vytrHeadline)
+            }
+
+            Text(title)
+                .font(.vytrHeadline)
+        }
+        .foregroundStyle(foreground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 15)
+        .background(Capsule().fill(background))
+        .contentShape(Capsule())
     }
 }
 

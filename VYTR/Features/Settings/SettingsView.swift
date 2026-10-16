@@ -18,6 +18,7 @@ struct SettingsView: View {
                     VStack(spacing: Theme.Spacing.l) {
                         remindersLink
                         goalsLink
+                        backupLink
                         keyCard
                         if hasKey { diagnosticCard }
                         privacyCard
@@ -101,6 +102,21 @@ struct SettingsView: View {
                 icon: "target",
                 title: "Daily targets",
                 subtitle: "Calories and macros you are aiming for"
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The only way to get this app's data off the phone on its own. An
+    /// iPhone backup takes the whole device; this takes just VYTR.
+    private var backupLink: some View {
+        NavigationLink {
+            BackupView()
+        } label: {
+            navRow(
+                icon: "externaldrive",
+                title: "Backup",
+                subtitle: "Save your meals, workouts and reminders to a file"
             )
         }
         .buttonStyle(.plain)

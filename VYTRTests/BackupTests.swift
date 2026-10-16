@@ -492,6 +492,157 @@ final class BackupTests: XCTestCase {
         XCTAssertTrue(plan.isEmpty)
     }
 
+    // MARK: - At volume
+
+    /// The single test that stands in for a real journal: a store with
+    /// enough variety in it that a field quietly dropped, a photo
+    /// truncated, or an exercise reordered has somewhere to hide.
+    func testBulkRoundTripReturnsEveryFieldUnchanged() throws {
+        let source = try makeContext()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // 20 meals: estimates with a range and manual entries with equal
+        // bounds, photos on every third one, and macros left nil on some
+        // so the nil-versus-zero distinction is covered at volume.
+        for i in 0..<20 {
+            let isEstimate = i % 2 == 1
+            let meal = Meal(
+                name: "Meal \(i)",
+                eatenAt: start.addingTimeInterval(Double(i) * 3_600),
+                caloriesMin: isEstimate ? 300 + i * 10 : 500 + i,
+                caloriesMax: isEstimate ? 420 + i * 10 : 500 + i,
+                proteinGrams: i % 3 == 0 ? nil : Double(20 + i),
+                carbsGrams: i % 4 == 0 ? nil : Double(50 + i),
+                fatGrams: i % 5 == 0 ? nil : Double(10 + i),
+                photo: i % 3 == 0
+                    ? Data((0..<(512 + i * 37)).map { UInt8(($0 &+ i) % 256) })
+                    : nil,
+                source: isEstimate ? .photoEstimate : .manual
+            )
+            source.insert(meal)
+        }
+
+        for w in 0..<3 {
+            let workout = Workout(
+                name: "Session \(w)",
+                scheduledAt: start.addingTimeInterval(Double(w) * 86_400),
+                completedAt: w == 0 ? start.addingTimeInterval(3_000) : nil,
+                repeatsWeekly: w != 1,
+                notifyMinutesBefore: w * 15,
+                exercises: (0..<(w + 3)).map { e in
+                    Exercise(
+                        name: "Lift \(w)-\(e)",
+                        sets: 3 + e,
+                        reps: 8 + w,
+                        isDone: e % 2 == 0,
+                        order: e
+                    )
+                }
+            )
+            source.insert(workout)
+        }
+
+        for r in 0..<5 {
+            source.insert(
+                Reminder(
+                    title: "Reminder \(r)",
+                    hour: 7 + r,
+                    minute: r * 11,
+                    weekdayMask: r == 0 ? Reminder.everyDay : (1 << r),
+                    isEnabled: r != 2,
+                    createdAt: start.addingTimeInterval(Double(-r) * 600)
+                )
+            )
+        }
+        try source.save()
+
+        let data = try BackupService.exportData(context: source)
+
+        let restored = try makeContext()
+        let plan = try BackupService.plan(forImporting: data, context: restored)
+        XCTAssertEqual(plan.newCount, 28)
+        try BackupService.apply(plan, context: restored)
+
+        let before = try source.fetch(
+            FetchDescriptor<Meal>(sortBy: [SortDescriptor(\.eatenAt)])
+        )
+        let after = try restored.fetch(
+            FetchDescriptor<Meal>(sortBy: [SortDescriptor(\.eatenAt)])
+        )
+        XCTAssertEqual(after.count, 20)
+
+        for (original, copy) in zip(before, after) {
+            XCTAssertEqual(copy.name, original.name)
+            XCTAssertEqual(copy.eatenAt, original.eatenAt)
+            XCTAssertEqual(copy.caloriesMin, original.caloriesMin, original.name)
+            XCTAssertEqual(copy.caloriesMax, original.caloriesMax, original.name)
+            XCTAssertEqual(copy.proteinGrams, original.proteinGrams, original.name)
+            XCTAssertEqual(copy.carbsGrams, original.carbsGrams, original.name)
+            XCTAssertEqual(copy.fatGrams, original.fatGrams, original.name)
+            XCTAssertEqual(copy.source, original.source, original.name)
+            XCTAssertEqual(copy.isEstimate, original.isEstimate, original.name)
+            XCTAssertEqual(copy.photo, original.photo, "Photo bytes differ for \(original.name)")
+        }
+
+        XCTAssertEqual(
+            after.compactMap(\.photo).count, 7,
+            "The meals that had photos must still have them"
+        )
+        XCTAssertTrue(
+            after.contains { $0.proteinGrams == nil },
+            "A macro that was never recorded must still be missing, not zero"
+        )
+
+        let workoutsBefore = try source.fetch(
+            FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.scheduledAt)])
+        )
+        let workoutsAfter = try restored.fetch(
+            FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.scheduledAt)])
+        )
+        XCTAssertEqual(workoutsAfter.count, 3)
+
+        for (original, copy) in zip(workoutsBefore, workoutsAfter) {
+            XCTAssertEqual(copy.name, original.name)
+            XCTAssertEqual(copy.scheduledAt, original.scheduledAt)
+            XCTAssertEqual(copy.completedAt, original.completedAt, original.name)
+            XCTAssertEqual(copy.repeatsWeekly, original.repeatsWeekly, original.name)
+            XCTAssertEqual(copy.notifyMinutesBefore, original.notifyMinutesBefore, original.name)
+
+            let originalExercises = original.orderedExercises
+            let copiedExercises = copy.orderedExercises
+            XCTAssertEqual(copiedExercises.count, originalExercises.count, original.name)
+
+            for (index, pair) in zip(originalExercises, copiedExercises).enumerated() {
+                XCTAssertEqual(pair.1.name, pair.0.name, "Exercise \(index) of \(original.name)")
+                XCTAssertEqual(pair.1.sets, pair.0.sets, pair.0.name)
+                XCTAssertEqual(pair.1.reps, pair.0.reps, pair.0.name)
+                XCTAssertEqual(pair.1.isDone, pair.0.isDone, pair.0.name)
+                XCTAssertEqual(pair.1.order, index, "Exercises must come back in the order they were in")
+            }
+        }
+
+        let remindersBefore = try source.fetch(
+            FetchDescriptor<Reminder>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        let remindersAfter = try restored.fetch(
+            FetchDescriptor<Reminder>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        XCTAssertEqual(remindersAfter.count, 5)
+
+        for (original, copy) in zip(remindersBefore, remindersAfter) {
+            XCTAssertEqual(copy.title, original.title)
+            XCTAssertEqual(copy.hour, original.hour, original.title)
+            XCTAssertEqual(copy.minute, original.minute, original.title)
+            XCTAssertEqual(copy.weekdayMask, original.weekdayMask, original.title)
+            XCTAssertEqual(copy.isEnabled, original.isEnabled, original.title)
+            XCTAssertEqual(copy.createdAt, original.createdAt, original.title)
+        }
+
+        // And the whole lot again changes nothing.
+        let second = try BackupService.plan(forImporting: data, context: restored)
+        XCTAssertTrue(second.isEmpty)
+    }
+
     func testFileNameCarriesTheDate() {
         let name = BackupService.fileName(for: Date(timeIntervalSince1970: 1_700_000_000))
         XCTAssertTrue(name.hasPrefix("VYTR-backup-"), name)

@@ -7,8 +7,17 @@ on:
 
 jobs:
   build:
-    name: Unsigned IPA
-    runs-on: macos-26
+    name: Unsigned IPA (${{ matrix.runner }})
+
+    # Stage 1 builds on both images to find out which one actually works,
+    # rather than assuming. The target device runs iOS 27, so xcode-27 is
+    # the preferred image, but its runner image is still in public preview.
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [xcode-27, macos-26]
+
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
@@ -18,6 +27,8 @@ jobs:
         run: |
           sw_vers
           xcodebuild -version
+          echo "--- available iOS SDKs ---"
+          xcodebuild -showsdks | grep -i ios || true
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -49,12 +60,15 @@ jobs:
           fi
           mkdir -p Payload
           cp -R "$APP" Payload/
-          zip -0 -y -qr VYTR-unsigned.ipa Payload
-          ls -lh VYTR-unsigned.ipa
+          zip -0 -y -qr "VYTR-${{ matrix.runner }}.ipa" Payload
+          ls -lh "VYTR-${{ matrix.runner }}.ipa"
+          echo "--- SDK the app was linked against ---"
+          /usr/libexec/PlistBuddy -c "Print :DTSDKName" "$APP/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP/Info.plist" || true
 
       - name: Upload IPA
         uses: actions/upload-artifact@v7
         with:
-          name: VYTR-unsigned-ipa
-          path: VYTR-unsigned.ipa
+          name: VYTR-${{ matrix.runner }}
+          path: VYTR-${{ matrix.runner }}.ipa
           retention-days: 30

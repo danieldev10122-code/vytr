@@ -9,6 +9,12 @@ The app is written on Windows and compiled on a macOS GitHub Actions runner,
 because Xcode only runs on macOS. There is no `.xcodeproj` in the repository:
 it is generated from `project.yml` by XcodeGen during each build.
 
+## Target device
+
+iPhone 17 running iOS 27. Stage 1 builds on both the `xcode-27`
+(iOS 27 SDK) and `macos-26` (iOS 26 SDK) runner images to confirm which
+produces an installable IPA, then pins the one that works.
+
 ## Build chain
 
 1. Push to `main` triggers `.github/workflows/ios-build.yml`

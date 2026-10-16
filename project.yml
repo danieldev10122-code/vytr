@@ -1,0 +1,43 @@
+# VYTR - Xcode project definition
+# This file replaces the .xcodeproj. XcodeGen builds the real project
+# from it on the macOS CI runner, so the project can be edited on Windows.
+name: VYTR
+
+options:
+  bundleIdPrefix: com.vytr
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.0"
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  VYTR:
+    type: application
+    platform: iOS
+    sources:
+      - path: VYTR
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vytr.app
+        PRODUCT_NAME: VYTR
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: VYTR
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_EMIT_LOC_STRINGS: NO
+
+schemes:
+  VYTR:
+    build:
+      targets:
+        VYTR: all
+    run:
+      config: Debug
+    archive:
+      config: Release

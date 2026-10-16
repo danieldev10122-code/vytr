@@ -8,8 +8,8 @@ struct CalorieRing: View {
     /// is labelled as approximate rather than exact.
     let isApproximate: Bool
 
-    private let lineWidth: CGFloat = 14
-    private let diameter: CGFloat = 190
+    private let lineWidth: CGFloat = 12
+    private let diameter: CGFloat = 172
 
     private var progress: Double {
         guard goal > 0 else { return 0 }
@@ -17,6 +17,13 @@ struct CalorieRing: View {
     }
 
     private var remaining: Int { max(goal - consumed, 0) }
+
+    /// Grouped digits ("1,850"), prefixed with ~ when any meal of the
+    /// day was estimated from a photo rather than entered directly.
+    private var consumedDisplay: String {
+        let digits = consumed.formatted(.number)
+        return isApproximate ? "~\(digits)" : digits
+    }
 
     var body: some View {
         ZStack {
@@ -33,8 +40,8 @@ struct CalorieRing: View {
                 .animation(Theme.Motion.spring, value: progress)
 
             VStack(spacing: 0) {
-                Text(isApproximate ? "~\(consumed)" : "\(consumed)")
-                    .font(.vytrNumber(52))
+                Text(consumedDisplay)
+                    .font(.vytrNumber(64))
                     .foregroundStyle(Theme.Palette.textPrimary)
                     .contentTransition(.numericText())
                     .animation(Theme.Motion.spring, value: consumed)
@@ -47,7 +54,7 @@ struct CalorieRing: View {
                     .font(.vytrLabel)
                     .tracking(1.2)
                     .foregroundStyle(remaining > 0 ? Theme.Palette.textTertiary : Theme.Palette.accent)
-                    .padding(.top, Theme.Spacing.s)
+                    .padding(.top, Theme.Spacing.xs)
             }
         }
         .frame(width: diameter, height: diameter)

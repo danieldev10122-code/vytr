@@ -29,14 +29,14 @@ struct MacroBar: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Theme.Palette.surfaceRaised)
+                        .fill(Theme.Palette.track)
                     Capsule()
                         .fill(color)
                         .frame(width: geo.size.width * progress)
                         .animation(Theme.Motion.spring, value: progress)
                 }
             }
-            .frame(height: 5)
+            .frame(height: 6)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)

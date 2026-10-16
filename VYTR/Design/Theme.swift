@@ -10,7 +10,7 @@ enum Theme {
         /// Cards sitting on the background.
         static let surface = Color(red: 0.08, green: 0.09, blue: 0.11)
         /// Tracks, wells and pressed states.
-        static let surfaceRaised = Color(red: 0.13, green: 0.14, blue: 0.17)
+        static let surfaceRaised = Color(red: 0.17, green: 0.18, blue: 0.22)
 
         /// The one accent. Reserved for progress and positive state.
         static let accent = Color(red: 0.72, green: 0.95, blue: 0.40)
@@ -23,6 +23,10 @@ enum Theme {
         static let textSecondary = Color.white.opacity(0.55)
         static let textTertiary  = Color.white.opacity(0.30)
 
+        /// Thin tracks need more contrast than a card edge to look
+        /// deliberate when the value is zero.
+        static let track = Color.white.opacity(0.10)
+
         static let separator = Color.white.opacity(0.08)
     }
 
@@ -32,6 +36,9 @@ enum Theme {
         static let m:  CGFloat = 16
         static let l:  CGFloat = 24
         static let xl: CGFloat = 32
+        /// Clears the floating tab bar, which overlays content rather
+        /// than pushing it up.
+        static let tabBarClearance: CGFloat = 96
     }
 
     enum Radius {

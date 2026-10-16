@@ -55,7 +55,7 @@ struct TodayView: View {
                         meals
                     }
                     .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.bottom, Theme.Spacing.xl)
+                    .padding(.bottom, Theme.Spacing.tabBarClearance)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)

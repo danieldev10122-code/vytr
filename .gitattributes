@@ -1,0 +1,15 @@
+# Force LF for everything the macOS runner executes or parses.
+# A stray CR makes bash fail with "\r: command not found".
+* text=auto eol=lf
+
+*.swift  text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.sh     text eol=lf
+*.plist  text eol=lf
+
+# Binary
+*.png    binary
+*.jpg    binary
+*.ipa    binary
+*.p12    binary

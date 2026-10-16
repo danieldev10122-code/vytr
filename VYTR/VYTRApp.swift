@@ -12,6 +12,12 @@ struct VYTRApp: App {
         }
     }()
 
+    init() {
+        // Must be set before any notification can arrive, so reminders
+        // appear even while VYTR is the app on screen.
+        NotificationPresenter.shared.register()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

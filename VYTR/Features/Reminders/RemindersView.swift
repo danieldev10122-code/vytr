@@ -171,10 +171,8 @@ struct RemindersView: View {
 
             Button {
                 Task {
-                    let sent = await NotificationService.sendTestNotification()
-                    testMessage = sent
-                        ? "Test sent. It should appear in about 5 seconds - lock the phone to see it arrive."
-                        : "Could not schedule a test notification."
+                    testMessage = await NotificationService.sendTestNotification()
+                    await load()
                 }
             } label: {
                 actionLabel("Send a test notification")

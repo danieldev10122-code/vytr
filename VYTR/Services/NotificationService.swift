@@ -72,8 +72,28 @@ enum NotificationService {
     /// Fires a notification a few seconds from now, so the whole path -
     /// permission, scheduling, delivery - can be checked without waiting
     /// for a real reminder time.
-    static func sendTestNotification() async -> Bool {
-        guard await requestAuthorization() else { return false }
+    ///
+    /// Returns a sentence describing what actually happened. "It did not
+    /// work" is not a diagnosis, and every step here can fail for a
+    /// different reason that the user can act on.
+    static func sendTestNotification() async -> String {
+        let status = await authorizationStatus()
+
+        switch status {
+        case .denied:
+            return "iOS is blocking notifications for VYTR. Turn them on in iOS Settings > VYTR > Notifications."
+        case .notDetermined:
+            guard await requestAuthorization() else {
+                return "Permission was not granted, so nothing can be shown."
+            }
+        default:
+            break
+        }
+
+        let settings = await center.notificationSettings()
+        guard settings.alertSetting != .disabled else {
+            return "Notifications are allowed but banners are switched off in iOS Settings > VYTR > Notifications."
+        }
 
         let content = UNMutableNotificationContent()
         content.title = "VYTR reminders work"
@@ -88,9 +108,9 @@ enum NotificationService {
 
         do {
             try await center.add(request)
-            return true
+            return "Test accepted by iOS. It should appear in about 5 seconds, here or on the lock screen."
         } catch {
-            return false
+            return "iOS refused the test: \(error.localizedDescription)"
         }
     }
 }

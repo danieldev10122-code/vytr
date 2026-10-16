@@ -6,6 +6,7 @@ enum GeminiError: LocalizedError {
     case noOutput(status: String)
     case badJSON(String)
     case transport(String)
+    case timedOut
 
     var errorDescription: String? {
         switch self {
@@ -25,6 +26,8 @@ enum GeminiError: LocalizedError {
             return "Could not read Gemini's answer. \(detail)"
         case .transport(let detail):
             return "Network problem. \(detail)"
+        case .timedOut:
+            return "Gemini took too long to answer. Tap Analyze again."
         }
     }
 
@@ -98,16 +101,27 @@ enum GeminiClient {
     static func analyze(imageData: Data) async throws -> MealAnalysis {
         guard let key = KeychainStore.read() else { throw GeminiError.missingKey }
 
+        // A smaller copy is sent than the one stored locally: fewer image
+        // tokens means a faster answer, and less of the photo leaves the
+        // device.
+        let payload = ImageProcessing.forAnalysis(imageData) ?? imageData
+
         let body: [String: Any] = [
             "model": model,
             "input": [
                 ["type": "text", "text": prompt],
-                ["type": "image", "data": imageData.base64EncodedString(), "mime_type": "image/jpeg"]
+                ["type": "image", "data": payload.base64EncodedString(), "mime_type": "image/jpeg"]
             ],
             "response_format": [
                 "type": "text",
                 "mime_type": "application/json",
                 "schema": schema
+            ],
+            // Gemini 3 models think before answering, and this one defaults
+            // to "medium", which took longer than a phone user will wait.
+            // "low" is the lowest level 3.8 Flash supports.
+            "generation_config": [
+                "thinking_level": "low"
             ]
         ]
 
@@ -116,12 +130,14 @@ enum GeminiClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 60
+        request.timeoutInterval = 120
 
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw GeminiError.timedOut
         } catch {
             throw GeminiError.transport(error.localizedDescription)
         }

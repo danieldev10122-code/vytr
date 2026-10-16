@@ -29,4 +29,11 @@ enum ImageProcessing {
 
         return resized.jpegData(compressionQuality: quality)
     }
+
+    /// A smaller rendition used only for the API call. The journal keeps
+    /// the larger copy; the model does not need it to recognise food.
+    static func forAnalysis(_ data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        return prepare(image, maxDimension: 1024, quality: 0.7)
+    }
 }

@@ -64,24 +64,18 @@ struct RemindersView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if status == .denied {
-                Button {
+                VytrButton(title: "Open iOS Settings", systemImage: "gear") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
-                } label: {
-                    actionLabel("Open iOS Settings")
                 }
-                .buttonStyle(.plain)
             } else {
-                Button {
+                VytrButton(title: "Allow notifications", systemImage: "bell.badge") {
                     Task {
                         await NotificationService.requestAuthorization()
                         await load()
                     }
-                } label: {
-                    actionLabel("Allow notifications")
                 }
-                .buttonStyle(.plain)
             }
         }
         .vytrCard()
@@ -169,15 +163,12 @@ struct RemindersView: View {
                 .font(.vytrCaption)
                 .foregroundStyle(Theme.Palette.textSecondary)
 
-            Button {
+            VytrButton(title: "Send a test notification", kind: .secondary) {
                 Task {
                     testMessage = await NotificationService.sendTestNotification()
                     await load()
                 }
-            } label: {
-                actionLabel("Send a test notification")
             }
-            .buttonStyle(.plain)
 
             if let testMessage {
                 Text(testMessage)
@@ -187,15 +178,6 @@ struct RemindersView: View {
             }
         }
         .vytrCard()
-    }
-
-    private func actionLabel(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(Theme.Palette.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Capsule().fill(Theme.Palette.accent))
     }
 
     private func refresh() {

@@ -200,22 +200,13 @@ struct TrainingView: View {
                 }
             }
 
-            Button {
+            VytrButton(
+                title: workout.isCompleted ? "Completed" : "Mark as done",
+                systemImage: workout.isCompleted ? "checkmark.circle.fill" : nil,
+                kind: workout.isCompleted ? .secondary : .primary
+            ) {
                 toggleComplete(workout)
-            } label: {
-                Text(workout.isCompleted ? "Completed" : "Mark as done")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(workout.isCompleted ? Theme.Palette.accent : Theme.Palette.background)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule()
-                            .fill(workout.isCompleted
-                                  ? Theme.Palette.accent.opacity(0.14)
-                                  : Theme.Palette.accent)
-                    )
             }
-            .buttonStyle(.plain)
         }
         .vytrCard()
     }

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct MealRow: View {
     let meal: Meal
@@ -8,11 +7,19 @@ struct MealRow: View {
         meal.eatenAt.formatted(date: .omitted, time: .shortened)
     }
 
+    private var accessibilityText: String {
+        var parts = [meal.name, timeText]
+        parts.append(meal.isEstimate
+                     ? "estimated \(meal.caloriesMin) to \(meal.caloriesMax) kilocalories"
+                     : "\(meal.caloriesMin) kilocalories")
+        return parts.joined(separator: ", ")
+    }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.m) {
-            thumbnail
+            MealThumbnail(meal: meal)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(meal.name)
                     .font(.vytrBody.weight(.medium))
                     .foregroundStyle(Theme.Palette.textPrimary)
@@ -20,9 +27,17 @@ struct MealRow: View {
 
                 HStack(spacing: Theme.Spacing.s) {
                     Text(timeText)
+
                     if meal.isEstimate {
-                        Text("estimate")
-                            .foregroundStyle(Theme.Palette.textTertiary)
+                        Text("ESTIMATE")
+                            .font(.vytrLabel)
+                            .tracking(0.8)
+                            .foregroundStyle(Theme.Palette.accent.opacity(0.85))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Theme.Palette.accentMuted)
+                            )
                     }
                 }
                 .font(.vytrCaption)
@@ -31,29 +46,18 @@ struct MealRow: View {
 
             Spacer(minLength: Theme.Spacing.s)
 
-            Text("\(meal.caloriesDisplay) kcal")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.Palette.textSecondary)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(meal.caloriesDisplay)
+                    .font(.vytrNumeric)
+                    .foregroundStyle(Theme.Palette.textPrimary)
+                Text("kcal")
+                    .font(.vytrLabel)
+                    .foregroundStyle(Theme.Palette.textTertiary)
+            }
         }
         .padding(.vertical, Theme.Spacing.s)
-    }
-
-    @ViewBuilder
-    private var thumbnail: some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(Theme.Palette.surfaceRaised)
-            .frame(width: 40, height: 40)
-            .overlay {
-                if let data = meal.photo, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                } else {
-                    Image(systemName: "fork.knife")
-                        .font(.system(size: 14, weight: .light))
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                }
-            }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
     }
 }

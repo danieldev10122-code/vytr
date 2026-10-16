@@ -131,21 +131,13 @@ struct AddMealView: View {
 
     /// Opt-in, per photo. Nothing is uploaded without this tap.
     private var analyzeButton: some View {
-        Button {
+        VytrButton(
+            title: analysis == nil ? "Analyze with AI" : "Analyze again",
+            systemImage: "sparkles",
+            isLoading: isAnalyzing
+        ) {
             Task { await analyze() }
-        } label: {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: "sparkles")
-                Text(analysis == nil ? "Analyze with AI" : "Analyze again")
-            }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(Theme.Palette.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Capsule().fill(Theme.Palette.accent))
         }
-        .buttonStyle(.plain)
-        .disabled(isAnalyzing)
     }
 
     private var caloriesRow: some View {

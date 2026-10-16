@@ -134,18 +134,8 @@ struct MealDetailView: View {
     }
 
     private var deleteButton: some View {
-        Button(role: .destructive) {
+        VytrButton(title: "Delete meal", systemImage: "trash", kind: .destructive) {
             showDeleteConfirm = true
-        } label: {
-            Text("Delete meal")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    Capsule().fill(Color.red.opacity(0.12))
-                )
         }
-        .buttonStyle(.plain)
     }
 }

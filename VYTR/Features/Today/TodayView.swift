@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 struct TodayView: View {
     @Environment(\.modelContext) private var context
@@ -34,22 +35,23 @@ struct TodayView: View {
 
     @State private var activeSheet: ActiveSheet?
 
-    // Filtering in memory rather than in a predicate keeps the date logic
-    // readable, and a personal day holds a handful of meals.
+    /// Re-read every minute so the screen rolls over at midnight instead
+    /// of showing yesterday until the app is relaunched.
+    @State private var now = Date.now
+    private let ticker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+
     private var todaysMeals: [Meal] {
-        allMeals.filter { Calendar.current.isDateInToday($0.eatenAt) }
+        allMeals.filter { Calendar.current.isDate($0.eatenAt, inSameDayAs: now) }
     }
 
     private var nextWorkout: Workout? {
-        allWorkouts.first { !$0.isCompleted && $0.scheduledAt >= .now }
+        allWorkouts.first { !$0.isCompleted && $0.scheduledAt >= now }
     }
 
-    /// The reminder that fires soonest, so Today answers "what is next"
-    /// without opening another screen.
     private var nextReminder: (reminder: Reminder, date: Date)? {
         allReminders
             .compactMap { reminder in
-                reminder.nextOccurrence().map { (reminder: reminder, date: $0) }
+                reminder.nextOccurrence(after: now).map { (reminder: reminder, date: $0) }
             }
             .min { $0.date < $1.date }
     }
@@ -74,16 +76,10 @@ struct TodayView: View {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.l) {
                         header
-
-                        CalorieRing(
-                            consumed: consumed,
-                            goal: calorieGoal,
-                            isApproximate: hasEstimate
-                        )
-                        .padding(.vertical, Theme.Spacing.s)
-
-                        logMealButton
-                        macros
+                        summaryCard
+                        VytrButton(title: "Log a meal", systemImage: "camera.fill") {
+                            activeSheet = .addMeal
+                        }
                         NextUpCard(
                             workout: nextWorkout,
                             reminder: nextReminder?.reminder,
@@ -96,8 +92,10 @@ struct TodayView: View {
                     // tab bar, so this is breathing room only.
                     .padding(.bottom, Theme.Spacing.xl)
                 }
+                .scrollIndicators(.hidden)
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onReceive(ticker) { now = $0 }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addMeal:
@@ -110,47 +108,50 @@ struct TodayView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(Date.now.formatted(.dateTime.weekday(.wide)))
+                Text(now.formatted(.dateTime.weekday(.wide)))
                     .font(.vytrTitle)
                     .foregroundStyle(Theme.Palette.textPrimary)
-                Text(Date.now.formatted(.dateTime.day().month(.wide)))
+                Text(now.formatted(.dateTime.day().month(.wide)))
                     .font(.vytrCaption)
                     .foregroundStyle(Theme.Palette.textSecondary)
             }
+
             Spacer()
+
+            if !todaysMeals.isEmpty {
+                Text("\(todaysMeals.count) logged")
+                    .font(.vytrLabel)
+                    .tracking(1)
+                    .foregroundStyle(Theme.Palette.textTertiary)
+            }
         }
         .padding(.top, Theme.Spacing.s)
+        .accessibilityElement(children: .combine)
     }
 
-    /// The primary action of the whole app, so it gets the accent and the
-    /// full width rather than a small icon tucked in a corner.
-    private var logMealButton: some View {
-        Button {
-            activeSheet = .addMeal
-        } label: {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Log a meal")
-                    .font(.system(size: 16, weight: .semibold))
+    /// The ring and the macros read as one instrument rather than two
+    /// unrelated widgets, which is the difference between a dashboard and
+    /// a pile of components.
+    private var summaryCard: some View {
+        VStack(spacing: Theme.Spacing.l) {
+            CalorieRing(
+                consumed: consumed,
+                goal: calorieGoal,
+                isApproximate: hasEstimate
+            )
+            .padding(.top, Theme.Spacing.s)
+
+            Divider().overlay(Theme.Palette.separator)
+
+            VStack(spacing: Theme.Spacing.m) {
+                MacroBar(label: "Protein", grams: total(\.proteinGrams), goal: proteinGoal, color: Theme.Palette.protein)
+                MacroBar(label: "Carbs",   grams: total(\.carbsGrams),   goal: carbsGoal,   color: Theme.Palette.carbs)
+                MacroBar(label: "Fat",     grams: total(\.fatGrams),     goal: fatGoal,     color: Theme.Palette.fat)
             }
-            .foregroundStyle(Theme.Palette.background)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Capsule().fill(Theme.Palette.accent))
         }
-        .buttonStyle(.plain)
-    }
-
-    private var macros: some View {
-        VStack(spacing: Theme.Spacing.m) {
-            MacroBar(label: "Protein", grams: total(\.proteinGrams), goal: proteinGoal, color: Theme.Palette.protein)
-            MacroBar(label: "Carbs",   grams: total(\.carbsGrams),   goal: carbsGoal,   color: Theme.Palette.carbs)
-            MacroBar(label: "Fat",     grams: total(\.fatGrams),     goal: fatGoal,     color: Theme.Palette.fat)
-        }
-        .vytrCard()
+        .vytrCard(padding: Theme.Spacing.l)
     }
 
     private var meals: some View {
@@ -161,7 +162,9 @@ struct TodayView: View {
                 EmptyStateView(
                     systemImage: "camera.viewfinder",
                     title: "No meals logged yet",
-                    message: "Tap Log a meal to add your first one."
+                    message: "Photograph a meal and VYTR will estimate it, or enter the numbers yourself.",
+                    actionTitle: "Log a meal",
+                    action: { activeSheet = .addMeal }
                 )
             } else {
                 VStack(spacing: 0) {
@@ -171,7 +174,7 @@ struct TodayView: View {
                         } label: {
                             MealRow(meal: meal)
                         }
-                        .buttonStyle(.plain)
+                        .pressable()
                         .contextMenu {
                             Button(role: .destructive) {
                                 delete(meal)
@@ -193,6 +196,7 @@ struct TodayView: View {
     private func delete(_ meal: Meal) {
         withAnimation(Theme.Motion.spring) {
             context.delete(meal)
+            try? context.save()
         }
     }
 }

@@ -62,12 +62,8 @@ struct SettingsView: View {
             }
 
             if hasKey {
-                Button(role: .destructive) {
+                VytrButton(title: "Remove key", kind: .destructive) {
                     showRemoveConfirm = true
-                } label: {
-                    Text("Remove key")
-                        .font(.vytrBody.weight(.medium))
-                        .foregroundStyle(.red)
                 }
             } else {
                 SecureField("Paste your Gemini API key", text: $keyInput)
@@ -80,20 +76,8 @@ struct SettingsView: View {
                             .fill(Theme.Palette.surfaceRaised)
                     )
 
-                Button(action: saveKey) {
-                    Text("Save key")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.Palette.background)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            Capsule().fill(
-                                keyInput.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.accent
-                            )
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(keyInput.isEmpty)
+                VytrButton(title: "Save key", systemImage: "key.fill", action: saveKey)
+                    .disabled(keyInput.isEmpty)
 
                 Text("Get a free key at aistudio.google.com/apikey")
                     .font(.vytrCaption)
@@ -194,27 +178,17 @@ struct SettingsView: View {
                 }
             }
 
-            Button {
+            VytrButton(
+                title: "Run connection test",
+                kind: .secondary,
+                isLoading: isDiagnosing
+            ) {
                 Task {
                     isDiagnosing = true
                     diagnostics = await GeminiDiagnostics.run()
                     isDiagnosing = false
                 }
-            } label: {
-                HStack(spacing: Theme.Spacing.s) {
-                    if isDiagnosing {
-                        ProgressView().controlSize(.small).tint(Theme.Palette.background)
-                    }
-                    Text(isDiagnosing ? "Testing" : "Run connection test")
-                }
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.Palette.background)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(Theme.Palette.accent))
             }
-            .buttonStyle(.plain)
-            .disabled(isDiagnosing)
         }
         .vytrCard()
     }

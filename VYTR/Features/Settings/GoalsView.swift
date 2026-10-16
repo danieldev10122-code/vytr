@@ -127,22 +127,14 @@ struct GoalsView: View {
     }
 
     private var resetCard: some View {
-        Button {
+        VytrButton(title: "Reset to defaults", kind: .secondary) {
             withAnimation(Theme.Motion.spring) {
                 calories = DailyGoals.defaultCalories
                 protein  = DailyGoals.defaultProtein
                 carbs    = DailyGoals.defaultCarbs
                 fat      = DailyGoals.defaultFat
             }
-        } label: {
-            Text("Reset to defaults")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.Palette.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Capsule().fill(Theme.Palette.surfaceRaised))
         }
-        .buttonStyle(.plain)
     }
 
     private func stepper(down: @escaping () -> Void, up: @escaping () -> Void, caption: String) -> some View {

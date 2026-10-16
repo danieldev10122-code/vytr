@@ -1,4 +1,5 @@
 import UIKit
+import ImageIO
 
 enum ImageProcessing {
 
@@ -35,5 +36,28 @@ enum ImageProcessing {
     static func forAnalysis(_ data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
         return prepare(image, maxDimension: 1024, quality: 0.7)
+    }
+
+    /// Builds a small image straight from the encoded data.
+    ///
+    /// UIImage(data:) decodes the whole picture: a 1280px JPEG fully
+    /// expanded in memory just to fill a 40pt square, on every redraw of
+    /// every row. ImageIO reads the file's structure and produces the
+    /// size asked for without ever materialising the full bitmap, which
+    /// is what makes a long journal scroll smoothly.
+    static func thumbnail(from data: Data, maxPixel: CGFloat) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel
+        ]
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        else { return nil }
+
+        return UIImage(cgImage: cgImage)
     }
 }

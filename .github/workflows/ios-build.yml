@@ -10,6 +10,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Tests run beside the build rather than before it. Booting a simulator
+  # costs minutes, and making every IPA wait on that turned a 40 second
+  # turnaround into six. Both jobs must pass for the run to be green.
+  test:
+    name: Unit tests
+    runs-on: xcode-27
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          # Pick whatever simulator the image actually has, rather than
+          # naming a device that may not exist on a future runner image.
+          UDID=$(xcrun simctl list devices available             | grep -oE '\(([0-9A-F]{8}-[0-9A-F-]+)\)'             | tr -d '()'             | head -n 1)
+          if [ -z "$UDID" ]; then
+            echo "::error::No iOS simulator available on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing on simulator $UDID"
+
+          xcodebuild test             -project VYTR.xcodeproj             -scheme VYTR             -destination "id=$UDID"             -derivedDataPath build-tests             | tee test.log             | grep -E "Test Case .* (passed|failed)|error:" || true
+
+          # tee swallows xcodebuild's exit status. -F matters: without it
+          # grep reads the leading ** as a regex quantifier, errors with
+          # exit 2, and fails the step even when every test passed.
+          grep -qF "** TEST SUCCEEDED **" test.log
+
+      - name: Summarise
+        if: always()
+        run: |
+          PASSED=$(grep -c "' passed (" test.log 2>/dev/null || echo 0)
+          FAILED=$(grep -c "' failed (" test.log 2>/dev/null || echo 0)
+          echo "### Unit tests" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Passed | Failed |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| $PASSED | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
+
   build:
     name: Unsigned IPA
 
@@ -38,30 +86,6 @@ jobs:
 
       - name: Generate Xcode project
         run: xcodegen generate
-
-      - name: Run unit tests
-        run: |
-          set -o pipefail
-          # Pick whatever simulator the image actually has, rather than
-          # naming a device that may not exist on a future runner image.
-          UDID=$(xcrun simctl list devices available \
-            | grep -oE '\(([0-9A-F]{8}-[0-9A-F-]+)\)' \
-            | tr -d '()' \
-            | head -n 1)
-          if [ -z "$UDID" ]; then
-            echo "::error::No iOS simulator available on this runner"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Testing on simulator $UDID"
-          xcodebuild test \
-            -project VYTR.xcodeproj \
-            -scheme VYTR \
-            -destination "id=$UDID" \
-            -derivedDataPath build-tests \
-            | tee test.log | grep -E "Test Suite|Test Case .* (passed|failed)|error:|\*\*" || true
-          # tee hides xcodebuild's exit status, so read it back explicitly.
-          grep -q "** TEST SUCCEEDED **" test.log
 
       - name: Build unsigned app
         run: |

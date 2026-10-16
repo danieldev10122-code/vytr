@@ -11,10 +11,14 @@ struct FormField: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.m) {
+            // Sized by its own text rather than a fixed width, so a
+            // larger Dynamic Type setting widens the label instead of
+            // truncating it.
             Text(label)
                 .font(.vytrBody)
                 .foregroundStyle(Theme.Palette.textSecondary)
-                .frame(width: 86, alignment: .leading)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 76, alignment: .leading)
 
             TextField(placeholder, text: $text)
                 .font(.vytrBody)

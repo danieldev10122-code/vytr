@@ -5,19 +5,23 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Unsigned IPA (${{ matrix.runner }})
+    name: Unsigned IPA
 
-    # Stage 1 builds on both images to find out which one actually works,
-    # rather than assuming. The target device runs iOS 27, so xcode-27 is
-    # the preferred image, but its runner image is still in public preview.
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [xcode-27, macos-26]
-
-    runs-on: ${{ matrix.runner }}
+    # Pinned to xcode-27 on evidence, not assumption: run 38872355660 built
+    # on xcode-27 and macos-26 side by side. xcode-27 linked the app against
+    # iphoneos27.0, matching the iOS 27 target device, while macos-26 linked
+    # against iphoneos26.5. iOS grants the current system appearance based on
+    # the SDK an app was linked against, so the newer SDK is the right choice.
+    #
+    # The xcode-27 runner image is in public preview. If it is ever withdrawn
+    # or starts failing, macos-26 is a verified fallback: change this one line.
+    runs-on: xcode-27
 
     steps:
       - name: Checkout
@@ -27,8 +31,7 @@ jobs:
         run: |
           sw_vers
           xcodebuild -version
-          echo "--- available iOS SDKs ---"
-          xcodebuild -showsdks | grep -i ios || true
+          xcodebuild -showsdks | grep -i "iOS" || true
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -60,15 +63,21 @@ jobs:
           fi
           mkdir -p Payload
           cp -R "$APP" Payload/
-          zip -0 -y -qr "VYTR-${{ matrix.runner }}.ipa" Payload
-          ls -lh "VYTR-${{ matrix.runner }}.ipa"
-          echo "--- SDK the app was linked against ---"
-          /usr/libexec/PlistBuddy -c "Print :DTSDKName" "$APP/Info.plist" || true
-          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP/Info.plist" || true
+          zip -0 -y -qr VYTR.ipa Payload
+
+          echo "### Build result" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| IPA size | $(du -h VYTR.ipa | cut -f1) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Linked SDK | $(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$APP/Info.plist") |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Minimum iOS | $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist") |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist") |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Bundle ID | $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist") |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v7
         with:
-          name: VYTR-${{ matrix.runner }}
-          path: VYTR-${{ matrix.runner }}.ipa
+          name: VYTR-ipa
+          path: VYTR.ipa
           retention-days: 30

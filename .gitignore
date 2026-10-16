@@ -25,3 +25,6 @@ Secrets.swift
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Locally downloaded build output
+dist/

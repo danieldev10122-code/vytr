@@ -9,12 +9,8 @@ struct RootView: View {
             JournalView()
                 .tabItem { Label("Journal", systemImage: "square.grid.2x2") }
 
-            PlaceholderView(
-                title: "Training",
-                systemImage: "dumbbell",
-                message: "Your weekly plan, today's exercises and completed sessions."
-            )
-            .tabItem { Label("Training", systemImage: "dumbbell") }
+            TrainingView()
+                .tabItem { Label("Training", systemImage: "dumbbell") }
 
             SettingsView()
                 .tabItem { Label("More", systemImage: "slider.horizontal.3") }

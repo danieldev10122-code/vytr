@@ -29,6 +29,7 @@ enum NotificationService {
     /// Identifier prefixes. Reminders and one-off tests are kept apart so
     /// that rewriting the schedule cannot touch anything else.
     private static let reminderPrefix = "reminder-"
+    private static let workoutPrefix = "workout-"
     private static let testPrefix = "vytr-test-"
 
     /// Rewrites the schedule from the reminders given.
@@ -73,6 +74,40 @@ enum NotificationService {
 
                 try? await center.add(request)
             }
+        }
+    }
+
+    /// Schedules the pre-session nudge for upcoming workouts.
+    ///
+    /// These fire once rather than weekly, because a repeating workout
+    /// only exists one session at a time: completing it creates the next
+    /// one, and that one is scheduled when this runs again.
+    static func rescheduleWorkouts(_ workouts: [Workout]) async {
+        let stale = await center.pendingNotificationRequests()
+            .map(\.identifier)
+            .filter { $0.hasPrefix(workoutPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: stale)
+
+        for workout in workouts {
+            guard let fireDate = workout.reminderDate else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = workout.name
+            content.body = "Starts at \(workout.timeText)."
+            content.sound = .default
+
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute],
+                from: fireDate
+            )
+
+            let request = UNNotificationRequest(
+                identifier: "\(workoutPrefix)\(workout.persistentModelID.hashValue)",
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            )
+
+            try? await center.add(request)
         }
     }
 

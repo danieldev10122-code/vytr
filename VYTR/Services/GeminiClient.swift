@@ -16,8 +16,8 @@ enum GeminiError: LocalizedError {
             switch status {
             case 400: return "Gemini rejected the request (400). \(Self.firstLine(body))"
             case 401, 403: return "The API key was refused (\(status)). Check it in More > AI analysis."
-            case 429: return "Free tier limit reached (429). Try again later."
-            case 500...599: return "Google's service is having trouble (\(status)). Try again shortly."
+            case 429: return "Free tier limit reached (429), even after retrying. Wait a minute and try again."
+            case 500...599: return "Google's servers are busy (\(status)). VYTR retried several times and they stayed busy. Try again in a minute."
             default: return "Gemini returned \(status). \(Self.firstLine(body))"
             }
         case .noOutput(let status):
@@ -28,6 +28,19 @@ enum GeminiError: LocalizedError {
             return "Network problem. \(detail)"
         case .timedOut:
             return "Gemini took too long to answer. Tap Analyze again."
+        }
+    }
+
+    /// Worth retrying. Google's guidance is to retry 408, 429 and 5xx and
+    /// never 400 or 403, which are faults in the request itself.
+    var isTransient: Bool {
+        switch self {
+        case .http(let status, _):
+            return status == 408 || status == 429 || (500...599).contains(status)
+        case .transport:
+            return true
+        case .missingKey, .badJSON, .noOutput, .timedOut:
+            return false
         }
     }
 
@@ -98,7 +111,32 @@ enum GeminiClient {
     ///
     /// This is the only place in the app that talks to a network, and it
     /// is only ever called from an explicit tap.
+    /// Google's own SDKs retry transient failures automatically. Calling
+    /// REST directly means doing it here, with the backoff their docs
+    /// prescribe: about a second, then doubling, with jitter so repeated
+    /// taps do not line up.
+    private static let maxAttempts = 4
+
     static func analyze(imageData: Data) async throws -> MealAnalysis {
+        var lastError: Error = GeminiError.noOutput(status: "no attempt made")
+
+        for attempt in 0..<maxAttempts {
+            if attempt > 0 {
+                let seconds = pow(2.0, Double(attempt - 1)) + Double.random(in: 0...0.4)
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            }
+
+            do {
+                return try await attemptAnalysis(imageData: imageData)
+            } catch let error as GeminiError where error.isTransient {
+                lastError = error
+            }
+        }
+
+        throw lastError
+    }
+
+    private static func attemptAnalysis(imageData: Data) async throws -> MealAnalysis {
         guard let key = KeychainStore.read() else { throw GeminiError.missingKey }
 
         // A smaller copy is sent than the one stored locally: fewer image

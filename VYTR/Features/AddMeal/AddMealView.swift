@@ -187,6 +187,9 @@ struct AddMealView: View {
                 Text("Sending this photo to Google Gemini")
                     .font(.vytrCaption)
                     .foregroundStyle(Theme.Palette.textTertiary)
+                Text("Retrying automatically if their servers are busy")
+                    .font(.vytrCaption)
+                    .foregroundStyle(Theme.Palette.textTertiary.opacity(0.7))
             }
         }
         .transition(.opacity)

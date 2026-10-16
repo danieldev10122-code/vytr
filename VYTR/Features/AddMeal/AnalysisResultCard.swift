@@ -35,7 +35,7 @@ struct AnalysisResultCard: View {
                     .foregroundStyle(Theme.Palette.textSecondary)
             } else {
                 VStack(spacing: Theme.Spacing.s) {
-                    ForEach(analysis.items) { item in
+                    ForEach(Array(analysis.items.enumerated()), id: \.offset) { _, item in
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.s) {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(item.name)

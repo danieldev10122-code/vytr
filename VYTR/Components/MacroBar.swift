@@ -20,7 +20,7 @@ struct MacroBar: View {
                     .tracking(1.2)
                     .foregroundStyle(Theme.Palette.textTertiary)
                 Spacer()
-                Text("\(Int(grams))g")
+                Text("\(Int(grams.rounded()))g")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .contentTransition(.numericText())
@@ -40,6 +40,6 @@ struct MacroBar: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)
-        .accessibilityValue("\(Int(grams)) of \(Int(goal)) grams")
+        .accessibilityValue("\(Int(grams.rounded())) of \(Int(goal.rounded())) grams")
     }
 }

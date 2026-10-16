@@ -38,14 +38,6 @@ final class Reminder {
         (1...7).filter { weekdayMask & (1 << ($0 - 1)) != 0 }
     }
 
-    func includes(weekday: Int) -> Bool {
-        weekdayMask & (1 << (weekday - 1)) != 0
-    }
-
-    func toggle(weekday: Int) {
-        weekdayMask ^= (1 << (weekday - 1))
-    }
-
     var timeText: String {
         var components = DateComponents()
         components.hour = hour

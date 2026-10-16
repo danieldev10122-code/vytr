@@ -39,6 +39,30 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          # Pick whatever simulator the image actually has, rather than
+          # naming a device that may not exist on a future runner image.
+          UDID=$(xcrun simctl list devices available \
+            | grep -oE '\(([0-9A-F]{8}-[0-9A-F-]+)\)' \
+            | tr -d '()' \
+            | head -n 1)
+          if [ -z "$UDID" ]; then
+            echo "::error::No iOS simulator available on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing on simulator $UDID"
+          xcodebuild test \
+            -project VYTR.xcodeproj \
+            -scheme VYTR \
+            -destination "id=$UDID" \
+            -derivedDataPath build-tests \
+            | tee test.log | grep -E "Test Suite|Test Case .* (passed|failed)|error:|\*\*" || true
+          # tee hides xcodebuild's exit status, so read it back explicitly.
+          grep -q "** TEST SUCCEEDED **" test.log
+
       - name: Build unsigned app
         run: |
           set -o pipefail

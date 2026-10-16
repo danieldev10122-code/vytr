@@ -17,8 +17,22 @@ struct TodayView: View {
     @AppStorage(DailyGoals.carbsKey)    private var carbsGoal   = DailyGoals.defaultCarbs
     @AppStorage(DailyGoals.fatKey)      private var fatGoal     = DailyGoals.defaultFat
 
-    @State private var showAddMeal = false
-    @State private var selectedMeal: Meal?
+    /// One sheet, chosen by case. Two .sheet modifiers on the same view
+    /// is not something SwiftUI guarantees to honour, and it is the kind
+    /// of arrangement that works until it quietly stops.
+    private enum ActiveSheet: Identifiable {
+        case addMeal
+        case mealDetail(Meal)
+
+        var id: String {
+            switch self {
+            case .addMeal: return "add"
+            case .mealDetail(let meal): return "detail-\(meal.persistentModelID)"
+            }
+        }
+    }
+
+    @State private var activeSheet: ActiveSheet?
 
     // Filtering in memory rather than in a predicate keeps the date logic
     // readable, and a personal day holds a handful of meals.
@@ -84,11 +98,13 @@ struct TodayView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showAddMeal) {
-                AddMealView(existing: nil)
-            }
-            .sheet(item: $selectedMeal) { meal in
-                MealDetailView(meal: meal)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .addMeal:
+                    AddMealView(existing: nil)
+                case .mealDetail(let meal):
+                    MealDetailView(meal: meal)
+                }
             }
         }
     }
@@ -112,7 +128,7 @@ struct TodayView: View {
     /// full width rather than a small icon tucked in a corner.
     private var logMealButton: some View {
         Button {
-            showAddMeal = true
+            activeSheet = .addMeal
         } label: {
             HStack(spacing: Theme.Spacing.s) {
                 Image(systemName: "camera.fill")
@@ -151,18 +167,19 @@ struct TodayView: View {
                 VStack(spacing: 0) {
                     ForEach(todaysMeals) { meal in
                         Button {
-                            selectedMeal = meal
+                            activeSheet = .mealDetail(meal)
                         } label: {
                             MealRow(meal: meal)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
-                                Button(role: .destructive) {
-                                    delete(meal)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
+                            Button(role: .destructive) {
+                                delete(meal)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
+                        }
+
                         if meal.id != todaysMeals.last?.id {
                             Divider().overlay(Theme.Palette.separator)
                         }

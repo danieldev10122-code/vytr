@@ -39,11 +39,28 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_EMIT_LOC_STRINGS: NO
 
+  VYTRTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: VYTRTests
+    dependencies:
+      - target: VYTR
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.vytr.app.tests
+
 schemes:
   VYTR:
     build:
       targets:
         VYTR: all
+        VYTRTests: [test]
+    test:
+      config: Debug
+      targets:
+        - VYTRTests
     run:
       config: Debug
     archive:

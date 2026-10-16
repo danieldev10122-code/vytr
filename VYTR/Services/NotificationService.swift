@@ -1,5 +1,7 @@
 import Foundation
 import UserNotifications
+import CryptoKit
+import SwiftData
 
 /// Schedules reminders as local notifications.
 ///
@@ -31,6 +33,20 @@ enum NotificationService {
     private static let reminderPrefix = "reminder-"
     private static let workoutPrefix = "workout-"
     private static let testPrefix = "vytr-test-"
+
+    /// A deterministic key for a stored object.
+    ///
+    /// This used to be persistentModelID.hashValue. Swift seeds its
+    /// hasher per process, so that value changed on every launch and two
+    /// objects could collide within one run, silently overwriting each
+    /// other's notification. Hashing the encoded identifier is stable
+    /// across launches and needs no change to the stored model.
+    private static func stableKey(for id: PersistentIdentifier) -> String {
+        let data = (try? JSONEncoder().encode(id))
+            ?? Data(String(describing: id).utf8)
+        let digest = SHA256.hash(data: data)
+        return String(digest.compactMap { String(format: "%02x", $0) }.joined().prefix(16))
+    }
 
     /// Rewrites the schedule from the reminders given.
     ///
@@ -67,7 +83,7 @@ enum NotificationService {
                 // Monday and Thursday is two weekly repeats rather than a
                 // daily one that has to be filtered at delivery time.
                 let request = UNNotificationRequest(
-                    identifier: "\(reminderPrefix)\(reminder.persistentModelID.hashValue)-\(weekday)",
+                    identifier: "\(reminderPrefix)\(stableKey(for: reminder.persistentModelID))-\(weekday)",
                     content: content,
                     trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
                 )
@@ -102,7 +118,7 @@ enum NotificationService {
             )
 
             let request = UNNotificationRequest(
-                identifier: "\(workoutPrefix)\(workout.persistentModelID.hashValue)",
+                identifier: "\(workoutPrefix)\(stableKey(for: workout.persistentModelID))",
                 content: content,
                 trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             )

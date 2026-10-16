@@ -36,9 +36,6 @@ enum Theme {
         static let m:  CGFloat = 16
         static let l:  CGFloat = 24
         static let xl: CGFloat = 32
-        /// Clears the floating tab bar, which overlays content rather
-        /// than pushing it up.
-        static let tabBarClearance: CGFloat = 96
     }
 
     enum Radius {

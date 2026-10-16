@@ -55,7 +55,9 @@ struct TodayView: View {
                         meals
                     }
                     .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.bottom, Theme.Spacing.tabBarClearance)
+                    // TabView already insets the scroll view for the floating tab
+                    // bar, so this is breathing room only.
+                    .padding(.bottom, Theme.Spacing.xl)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)

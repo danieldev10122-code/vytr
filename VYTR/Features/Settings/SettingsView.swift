@@ -21,6 +21,7 @@ struct SettingsView: View {
                         if hasKey { diagnosticCard }
                         privacyCard
                         goalsNote
+                        aboutCard
                     }
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.bottom, Theme.Spacing.xl)
@@ -219,6 +220,36 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             SectionLabel(text: "About the numbers")
             Text("Calorie figures from a photo are estimates, not measurements, and are shown as ranges. This app is for building habits, not for medical or dietary instruction.")
+                .font(.vytrCaption)
+                .foregroundStyle(Theme.Palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .vytrCard()
+    }
+
+    /// The app knows when its own signature runs out, so the seven-day
+    /// limit does not have to be remembered or guessed at.
+    private var aboutCard: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            SectionLabel(text: "This build")
+
+            HStack(spacing: Theme.Spacing.s) {
+                Circle()
+                    .fill(SigningInfo.isExpiringSoon ? Theme.Palette.fat : Theme.Palette.accent)
+                    .frame(width: 8, height: 8)
+                Text("VYTR \(SigningInfo.version)")
+                    .font(.vytrBody)
+                    .foregroundStyle(Theme.Palette.textSecondary)
+            }
+
+            Text(SigningInfo.expiryText)
+                .font(.vytrCaption)
+                .foregroundStyle(SigningInfo.isExpiringSoon
+                                 ? Theme.Palette.fat
+                                 : Theme.Palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Re-signing keeps your meals, workouts and reminders. Connect the iPhone, open Sideloadly, drop in the same VYTR.ipa and press Start.")
                 .font(.vytrCaption)
                 .foregroundStyle(Theme.Palette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)

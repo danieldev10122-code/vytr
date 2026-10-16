@@ -31,6 +31,19 @@ produces an installable IPA, then pins the one that works.
 | `VYTR/` | Swift sources |
 | `.github/workflows/` | Cloud build definition |
 
+## Keeping it running
+
+The app is signed with a free Apple ID, so it stops opening after seven
+days. Re-signing takes two minutes, needs no new build and keeps all
+data: see [docs/RESIGNING.md](docs/RESIGNING.md). The More tab shows the
+exact expiry date, read from the provisioning profile.
+
+To pull a fresh build after a code change:
+
+```powershell
+.\scripts\Get-LatestIPA.ps1 -Build
+```
+
 ## Secrets
 
 No API keys, tokens or personal data belong in this repository.

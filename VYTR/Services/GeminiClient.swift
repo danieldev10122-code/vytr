@@ -83,6 +83,10 @@ enum GeminiClient {
     food is hard to identify, and say why in notes. If you cannot see any \
     food at all, return an empty items array and set confidence to low.
 
+    Always give all three macros in grams, even when you are unsure: a \
+    best estimate is useful, a missing value is not. Only use zero when \
+    the food genuinely contains none of that macronutrient.
+
     Keep names and portions short enough to read on a phone.
     """
 
@@ -111,7 +115,15 @@ enum GeminiClient {
             "fatGrams": ["type": "number"],
             "notes": ["type": "string"]
         ],
-        "required": ["mealName", "confidence", "items", "totalCaloriesMin", "totalCaloriesMax"]
+        // The macros are required too. Left optional, the model simply
+        // omitted them, they were stored as nil, and the day total then
+        // rendered nil as "0g" - a sandwich with no carbs and no fat,
+        // which reads as a measurement rather than a missing value.
+        "required": [
+            "mealName", "confidence", "items",
+            "totalCaloriesMin", "totalCaloriesMax",
+            "proteinGrams", "carbsGrams", "fatGrams"
+        ]
     ]
 
     /// Sends one photo to Google and returns the parsed estimate.

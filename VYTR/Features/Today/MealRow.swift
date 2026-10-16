@@ -16,7 +16,7 @@ struct MealRow: View {
                 Text(meal.name)
                     .font(.vytrBody.weight(.medium))
                     .foregroundStyle(Theme.Palette.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
 
                 HStack(spacing: Theme.Spacing.s) {
                     Text(timeText)

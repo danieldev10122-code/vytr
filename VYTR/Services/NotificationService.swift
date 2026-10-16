@@ -26,14 +26,27 @@ enum NotificationService {
         }
     }
 
-    /// Rewrites the whole schedule from the reminders given.
+    /// Identifier prefixes. Reminders and one-off tests are kept apart so
+    /// that rewriting the schedule cannot touch anything else.
+    private static let reminderPrefix = "reminder-"
+    private static let testPrefix = "vytr-test-"
+
+    /// Rewrites the schedule from the reminders given.
     ///
-    /// Replacing everything rather than patching individual requests keeps
-    /// the scheduled notifications and the stored reminders from drifting
-    /// apart, which is the usual source of a reminder that fires after it
-    /// was deleted.
+    /// Replacing every reminder rather than patching individual requests
+    /// keeps the scheduled notifications and the stored reminders from
+    /// drifting apart, which is the usual source of a reminder that fires
+    /// after it was deleted.
+    ///
+    /// Only reminder requests are cleared. This used to call
+    /// removeAllPendingNotificationRequests, which also deleted the
+    /// five-second test notification a moment after it was scheduled, so
+    /// the test could never fire while real reminders worked fine.
     static func reschedule(_ reminders: [Reminder]) async {
-        center.removeAllPendingNotificationRequests()
+        let stale = await center.pendingNotificationRequests()
+            .map(\.identifier)
+            .filter { $0.hasPrefix(reminderPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: stale)
 
         for reminder in reminders where reminder.isEnabled {
             let title = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -53,7 +66,7 @@ enum NotificationService {
                 // Monday and Thursday is two weekly repeats rather than a
                 // daily one that has to be filtered at delivery time.
                 let request = UNNotificationRequest(
-                    identifier: "\(reminder.persistentModelID.hashValue)-\(weekday)",
+                    identifier: "\(reminderPrefix)\(reminder.persistentModelID.hashValue)-\(weekday)",
                     content: content,
                     trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
                 )
@@ -63,10 +76,13 @@ enum NotificationService {
         }
     }
 
-    /// How many notifications iOS currently holds. Shown in the UI so the
-    /// schedule can be seen rather than taken on trust.
+    /// How many reminder notifications iOS currently holds. Shown in the
+    /// UI so the schedule can be seen rather than taken on trust. Tests
+    /// are excluded so a pending test cannot inflate the count.
     static func pendingCount() async -> Int {
-        await center.pendingNotificationRequests().count
+        await center.pendingNotificationRequests()
+            .filter { $0.identifier.hasPrefix(reminderPrefix) }
+            .count
     }
 
     /// Fires a notification a few seconds from now, so the whole path -
@@ -101,7 +117,7 @@ enum NotificationService {
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "vytr-test-\(UUID().uuidString)",
+            identifier: "\(testPrefix)\(UUID().uuidString)",
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
         )

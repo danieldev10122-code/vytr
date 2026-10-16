@@ -6,6 +6,8 @@ struct SettingsView: View {
     @State private var hasKey = KeychainStore.hasKey
     @State private var message: String?
     @State private var showRemoveConfirm = false
+    @State private var diagnostics: [GeminiDiagnostics.Result] = []
+    @State private var isDiagnosing = false
 
     var body: some View {
         NavigationStack {
@@ -15,6 +17,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.l) {
                         keyCard
+                        if hasKey { diagnosticCard }
                         privacyCard
                         goalsNote
                     }
@@ -99,6 +102,63 @@ struct SettingsView: View {
                     .font(.vytrCaption)
                     .foregroundStyle(Theme.Palette.textSecondary)
             }
+        }
+        .vytrCard()
+    }
+
+    /// Sends a few deliberately tiny requests so a failure can be read as
+    /// a measurement rather than guessed at from one opaque error.
+    private var diagnosticCard: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            SectionLabel(text: "Connection test")
+
+            Text("Sends a few very small requests to Gemini, one ingredient at a time, and times each. No photo of yours is used.")
+                .font(.vytrCaption)
+                .foregroundStyle(Theme.Palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !diagnostics.isEmpty {
+                VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                    ForEach(diagnostics) { result in
+                        HStack(alignment: .top, spacing: Theme.Spacing.s) {
+                            Image(systemName: result.ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(result.ok ? Theme.Palette.accent : .red)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(result.step)
+                                    .font(.vytrCaption.weight(.medium))
+                                    .foregroundStyle(Theme.Palette.textSecondary)
+                                Text(result.outcome)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(Theme.Palette.textTertiary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button {
+                Task {
+                    isDiagnosing = true
+                    diagnostics = await GeminiDiagnostics.run()
+                    isDiagnosing = false
+                }
+            } label: {
+                HStack(spacing: Theme.Spacing.s) {
+                    if isDiagnosing {
+                        ProgressView().controlSize(.small).tint(Theme.Palette.background)
+                    }
+                    Text(isDiagnosing ? "Testing" : "Run connection test")
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.Palette.background)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(Theme.Palette.accent))
+            }
+            .buttonStyle(.plain)
+            .disabled(isDiagnosing)
         }
         .vytrCard()
     }

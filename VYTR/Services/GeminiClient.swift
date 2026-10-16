@@ -39,7 +39,11 @@ enum GeminiError: LocalizedError {
             return status == 408 || status == 429 || (500...599).contains(status)
         case .transport:
             return true
-        case .missingKey, .badJSON, .noOutput, .timedOut:
+        case .timedOut:
+            // Worth one more go now that a single attempt is capped at 45s
+            // rather than two minutes.
+            return true
+        case .missingKey, .badJSON, .noOutput:
             return false
         }
     }
@@ -52,9 +56,12 @@ enum GeminiError: LocalizedError {
 
 enum GeminiClient {
 
-    /// Chosen because the docs recommend 3.8 Flash for new projects and it
-    /// is listed on the free tier. All Gemini models accept image input.
-    static let model = "gemini-3.8-flash"
+    /// Flash-Lite rather than 3.8 Flash. The docs recommend either for new
+    /// projects, both are on the free tier and both accept images, but
+    /// 3.8 Flash kept timing out or returning 503 on this account, and a
+    /// lighter model answers faster and competes for less capacity.
+    /// The diagnostic in Settings times both, so this is revisitable.
+    static let model = "gemini-3.5-flash-lite"
 
     private static let endpoint = URL(string: "https://generativelanguage.googleapis.com/v1beta/interactions")!
 
@@ -168,7 +175,11 @@ enum GeminiClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 120
+        // Short enough that a stuck request fails fast and the retry loop
+        // gets another go, rather than one long hang with no second
+        // chance. Four attempts at 45s is still under the patience of
+        // someone holding a phone.
+        request.timeoutInterval = 45
 
         let data: Data
         let response: URLResponse

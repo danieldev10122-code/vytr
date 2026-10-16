@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct TodayView: View {
+    @Environment(\.modelContext) private var context
+
     @Query(sort: \Meal.eatenAt, order: .reverse)
     private var allMeals: [Meal]
 
@@ -12,6 +14,8 @@ struct TodayView: View {
     @AppStorage(DailyGoals.proteinKey)  private var proteinGoal = DailyGoals.defaultProtein
     @AppStorage(DailyGoals.carbsKey)    private var carbsGoal   = DailyGoals.defaultCarbs
     @AppStorage(DailyGoals.fatKey)      private var fatGoal     = DailyGoals.defaultFat
+
+    @State private var showAddMeal = false
 
     // Filtering in memory rather than in a predicate keeps the date logic
     // readable, and a personal day holds a handful of meals.
@@ -43,6 +47,7 @@ struct TodayView: View {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.l) {
                         header
+
                         CalorieRing(
                             consumed: consumed,
                             goal: calorieGoal,
@@ -50,17 +55,21 @@ struct TodayView: View {
                         )
                         .padding(.vertical, Theme.Spacing.s)
 
+                        logMealButton
                         macros
                         NextUpCard(workout: nextWorkout)
                         meals
                     }
                     .padding(.horizontal, Theme.Spacing.m)
-                    // TabView already insets the scroll view for the floating tab
-                    // bar, so this is breathing room only.
+                    // TabView already insets the scroll view for the floating
+                    // tab bar, so this is breathing room only.
                     .padding(.bottom, Theme.Spacing.xl)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showAddMeal) {
+                AddMealView()
+            }
         }
     }
 
@@ -77,6 +86,26 @@ struct TodayView: View {
             Spacer()
         }
         .padding(.top, Theme.Spacing.s)
+    }
+
+    /// The primary action of the whole app, so it gets the accent and the
+    /// full width rather than a small icon tucked in a corner.
+    private var logMealButton: some View {
+        Button {
+            showAddMeal = true
+        } label: {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Log a meal")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundStyle(Theme.Palette.background)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Capsule().fill(Theme.Palette.accent))
+        }
+        .buttonStyle(.plain)
     }
 
     private var macros: some View {
@@ -96,12 +125,19 @@ struct TodayView: View {
                 EmptyStateView(
                     systemImage: "camera.viewfinder",
                     title: "No meals logged yet",
-                    message: "Meals you log today will appear here."
+                    message: "Tap Log a meal to add your first one."
                 )
             } else {
                 VStack(spacing: 0) {
                     ForEach(todaysMeals) { meal in
                         MealRow(meal: meal)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    delete(meal)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         if meal.id != todaysMeals.last?.id {
                             Divider().overlay(Theme.Palette.separator)
                         }
@@ -110,5 +146,11 @@ struct TodayView: View {
             }
         }
         .vytrCard()
+    }
+
+    private func delete(_ meal: Meal) {
+        withAnimation(Theme.Motion.spring) {
+            context.delete(meal)
+        }
     }
 }

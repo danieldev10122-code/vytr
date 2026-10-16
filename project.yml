@@ -28,6 +28,10 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: VYTR
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        # Shown by iOS when the camera is first used. Photo library
+        # access needs no key: PhotosPicker runs out of process and
+        # hands back only the chosen image.
+        INFOPLIST_KEY_NSCameraUsageDescription: VYTR uses the camera so you can photograph a meal when logging it. Photos stay on this device.
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_EMIT_LOC_STRINGS: NO
